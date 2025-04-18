@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 
 const ACCEPTED_TYPES = {
@@ -17,8 +17,21 @@ export default function FileUpload() {
   const [generating, setGenerating] = useState(false);
   const [latex, setLatex] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+    if (fileRejections && fileRejections.length > 0) {
+      setToast({ type: 'error', message: '❌ Dateiformat nicht unterstützt' });
+      return;
+    }
     const uploaded = acceptedFiles[0];
     setFile(uploaded);
 
@@ -55,8 +68,10 @@ export default function FileUpload() {
       const data = await res.json();
       setSessionId(data.session_id);
       setStep('done');
+      setToast({ type: 'success', message: '✅ Datei erfolgreich hochgeladen' });
     } catch (err: any) {
       setError(err.message || 'Upload error');
+      setToast({ type: 'error', message: '❌ Upload fehlgeschlagen' });
     } finally {
       setUploading(false);
     }
@@ -76,15 +91,58 @@ export default function FileUpload() {
       if (!res.ok) throw new Error('Fehler beim Generieren');
       const text = await res.text();
       setLatex(text);
+      setToast({ type: 'success', message: '✅ Aufgabe erfolgreich generiert' });
     } catch (err: any) {
       setGenError(err.message || 'Fehler beim Generieren');
+      setToast({ type: 'error', message: '❌ Fehler beim Generieren' });
     } finally {
       setGenerating(false);
     }
   };
 
+  // Step mapping for progress UI
+  const getStepIndex = () => {
+    if (step === 'select') return 0;
+    if (step === 'uploading') return 0;
+    if (step === 'done' && !latex) return 1;
+    if (step === 'done' && latex) return 2;
+    return 0;
+  };
+  const steps = [
+    'Upload',
+    'Aufgaben generieren',
+    'PDF herunterladen',
+  ];
+  const currentStep = getStepIndex();
+
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white text-base font-medium transition-all
+            ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          {toast.message}
+        </div>
+      )}
+      {/* Progress Steps UI */}
+      <div className="flex justify-between items-center mb-8">
+        {steps.map((label, idx) => (
+          <div key={label} className="flex-1 flex flex-col items-center">
+            <div
+              className={`w-8 h-8 flex items-center justify-center rounded-full border-2 text-sm font-bold mb-1
+                ${currentStep === idx ? 'bg-blue-600 text-white border-blue-600' : idx < currentStep ? 'bg-green-500 text-white border-green-500' : 'bg-gray-200 text-gray-400 border-gray-300'}`}
+            >
+              {idx + 1}
+            </div>
+            <span className={`text-xs ${currentStep === idx ? 'text-blue-700 font-semibold' : idx < currentStep ? 'text-green-700' : 'text-gray-400'}`}>{label}</span>
+            {idx < steps.length - 1 && (
+              <div className={`h-1 w-full ${idx < currentStep ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+            )}
+          </div>
+        ))}
+      </div>
       {step === 'select' && !file ? (
         <div
           {...getRootProps()}
@@ -148,6 +206,17 @@ export default function FileUpload() {
             <div className="mt-4 text-left bg-gray-100 p-2 rounded max-h-64 overflow-auto">
               <pre className="text-xs whitespace-pre-wrap">{latex}</pre>
             </div>
+          )}
+          {latex && sessionId && (
+            <a
+              href={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
+              className="inline-block mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold"
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Neue Schulaufgabe als PDF herunterladen
+            </a>
           )}
         </div>
       ) : null}
