@@ -14,6 +14,9 @@ export default function FileUpload() {
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [step, setStep] = useState<'select' | 'uploading' | 'done'>('select');
+  const [generating, setGenerating] = useState(false);
+  const [latex, setLatex] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploaded = acceptedFiles[0];
@@ -56,6 +59,27 @@ export default function FileUpload() {
       setError(err.message || 'Upload error');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const generateLatex = async () => {
+    if (!sessionId) return;
+    setGenerating(true);
+    setGenError(null);
+    setLatex(null);
+    try {
+      const res = await fetch('http://localhost:8000/api/generate-latex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (!res.ok) throw new Error('Fehler beim Generieren');
+      const text = await res.text();
+      setLatex(text);
+    } catch (err: any) {
+      setGenError(err.message || 'Fehler beim Generieren');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -111,7 +135,20 @@ export default function FileUpload() {
         <div className="text-center space-y-4">
           <div className="text-green-600 font-semibold">Upload successful!</div>
           <div className="text-gray-700">Session ID: <span className="font-mono">{sessionId}</span></div>
-          {/* Next step UI can go here */}
+          <button
+            onClick={generateLatex}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 mt-4"
+            disabled={generating}
+          >
+            {generating ? 'Wird erstellt…' : 'Generate'}
+          </button>
+          {generating && <div className="mt-2 text-gray-500">Wird erstellt…</div>}
+          {genError && <div className="text-red-600 mt-2">{genError}</div>}
+          {latex && (
+            <div className="mt-4 text-left bg-gray-100 p-2 rounded max-h-64 overflow-auto">
+              <pre className="text-xs whitespace-pre-wrap">{latex}</pre>
+            </div>
+          )}
         </div>
       ) : null}
     </div>
