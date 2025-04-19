@@ -51,19 +51,19 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
     # TODO: Integrate with Gemini API here
     # For now, return a mock LaTeX document
     latex = r"""
-\\documentclass[a4paper,12pt]{article}
-\\usepackage[utf8]{inputenc}
-\\begin{document}
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
 
-\\section*{Mathe Arbeitsblatt}
+\section*{Mathe Arbeitsblatt}
 
-\\begin{enumerate}
+\begin{enumerate}
   \item Löse die Gleichung: $3x + 5 = 20$
   \item Berechne den Umfang eines Kreises mit Radius $r = 4$ cm.
   \item Addiere: $\frac{2}{3} + \frac{1}{6}$
 \end{enumerate}
 
-\\end{document}
+\end{document}
 """
     logging.info(
         f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}"
