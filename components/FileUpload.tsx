@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
+import Image from "next/image";
 
 const ACCEPTED_TYPES = {
   "image/jpeg": [],
@@ -177,11 +178,17 @@ export default function FileUpload() {
       ) : step === 'select' && file ? (
         <div className="flex flex-col items-center space-y-4">
           {file.type.startsWith("image/") ? (
-            <img
-              src={preview!}
-              alt="Preview"
-              className="max-h-48 rounded shadow"
-            />
+            <div className="relative w-48 h-48">
+              <Image
+                src={preview!}
+                alt="Preview"
+                fill
+                style={{ objectFit: 'contain' }}
+                className="rounded shadow"
+                sizes="192px"
+                priority
+              />
+            </div>
           ) : (
             <div className="flex flex-col items-center">
               <span className="text-6xl">📄</span>
