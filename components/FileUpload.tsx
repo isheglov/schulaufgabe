@@ -29,7 +29,7 @@ export default function FileUpload() {
     }
   }, [toast]);
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: import('react-dropzone').FileRejection[]) => {
     if (fileRejections && fileRejections.length > 0) {
       setToast({ type: 'error', message: '❌ Dateiformat nicht unterstützt' });
       return;
@@ -71,8 +71,8 @@ export default function FileUpload() {
       setSessionId(data.session_id);
       setStep('done');
       setToast({ type: 'success', message: '✅ Datei erfolgreich hochgeladen' });
-    } catch (err: any) {
-      setError(err.message || 'Upload error');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload error');
       setToast({ type: 'error', message: '❌ Upload fehlgeschlagen' });
     } finally {
       setUploading(false);
@@ -110,8 +110,8 @@ export default function FileUpload() {
       } else {
         setPdfReady(true);
       }
-    } catch (err: any) {
-      setGenError(err.message || 'Fehler beim Generieren');
+    } catch (err: unknown) {
+      setGenError(err instanceof Error ? err.message : 'Fehler beim Generieren');
       setToast({ type: 'error', message: '❌ Fehler beim Generieren' });
       setPdfReady(false);
     } finally {
