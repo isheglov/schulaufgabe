@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
-from google.genai import types
 import pprint
 import re
 

@@ -51,7 +51,7 @@ source backend/venv/bin/activate.fish
 
 ### Install dependencies
 ```bash
-pip install fastapi uvicorn aiofiles python-multipart
+pip install -r backend/requirements.txt
 ```
 
 ### Run the FastAPI server
@@ -63,49 +63,43 @@ API will be available at [http://localhost:8000/api/upload](http://localhost:800
 
 ---
 
+## Deploying to Render (Free Hosting)
+
+You can deploy both the frontend (Next.js) and backend (FastAPI) to [Render](https://render.com/) for free:
+
+### Backend (FastAPI)
+1. Push your code to GitHub.
+2. Go to Render, click "New +" → "Web Service".
+3. Connect your GitHub repo and set the root directory to `backend`.
+4. Set the build command:
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Set the start command:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 10000
+   ```
+6. Set the environment to Python 3.10.
+7. Click "Create Web Service".
+
+### Frontend (Next.js)
+1. Go to Render, click "New +" → "Web Service" (or "Static Site" for static export).
+2. Set the root directory to the project root (leave blank if at root).
+3. Set the build command:
+   ```bash
+   npm install && npm run build
+   ```
+4. Set the start command:
+   ```bash
+   npm start
+   ```
+5. Set the environment to Node 18.
+6. Set environment variables as needed (e.g., `NEXT_PUBLIC_API_URL` to your backend's Render URL).
+7. Click "Create Web Service".
+
+Render will auto-deploy on every push to GitHub.
+
+---
+
 ## Example: Upload a file via curl
-```bash
-curl -F "file=@/path/to/your/test.jpg" http://localhost:8000/api/upload
 ```
-
----
-
-## Linting & Code Style
-
-### Frontend (TypeScript/Next.js)
-
-1. Install dependencies (if not already):
-   ```bash
-   npm install
-   ```
-2. Run ESLint:
-   ```bash
-   npx eslint . --ext .ts,.tsx
-   ```
-
-### Backend (Python)
-
-1. Activate your virtual environment:
-   ```bash
-   source backend/venv/bin/activate
-   # or for fish shell:
-   source backend/venv/bin/activate.fish
-   ```
-2. Install flake8 and black (if not already):
-   ```bash
-   pip install flake8 black
-   ```
-3. Run flake8:
-   ```bash
-   flake8 backend/
-   ```
-4. Run black (to check formatting):
-   ```bash
-   black --check backend/
-   ```
-   (or to auto-format: `black backend/`)
-
----
-
-## License
-MIT 

@@ -54,7 +54,7 @@ def test_compile_pdf():
 def test_render_pdf():
     session_id = _upload_and_get_session_id()
     latex = _generate_latex_and_get(session_id)
-    pdf_path = _compile_pdf_and_get_path(session_id, latex)
+    _compile_pdf_and_get_path(session_id, latex)
     response = client.get(f"/api/render-pdf?session_id={session_id}")
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
