@@ -6,6 +6,11 @@ import aiofiles
 import subprocess
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import google.generativeai as genai
+from dotenv import load_dotenv
+from google.genai import types
+import pprint
+import re
 
 logging.basicConfig(level=logging.INFO)
 
@@ -38,8 +43,13 @@ async def upload_file(file: UploadFile = File(...)):
 async def generate_latex(session_id: str = Body(..., embed=True)):
     """
     Receives a session_id, loads the image, sends it to Gemini, and returns LaTeX.
-    For now, Gemini integration is mocked.
     """
+    load_dotenv()
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        logging.error("[GEMINI] GOOGLE_API_KEY not set in environment.")
+        return PlainTextResponse("Gemini API key not set", status_code=500)
+    genai.configure(api_key=api_key)
     image_path = f"/tmp/{session_id}/input.jpg"
     logging.info(
         f"[LATEX] Generating LaTeX for session_id={session_id}, image_path={image_path}"
@@ -48,27 +58,57 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
         logging.error(f"[LATEX] Image not found: {image_path}")
         return PlainTextResponse("Image not found", status_code=404)
 
-    # TODO: Integrate with Gemini API here
-    # For now, return a mock LaTeX document
-    latex = r"""
-\documentclass[a4paper,12pt]{article}
-\usepackage[utf8]{inputenc}
-\begin{document}
+    # Read image as bytes
+    with open(image_path, "rb") as img_file:
+        image_bytes = img_file.read()
 
-\section*{Mathe Arbeitsblatt}
+    # Prepare prompt (load from gemini_system_prompt.txt)
+    prompt_path = os.path.join(os.path.dirname(__file__), "gemini_system_prompt.txt")
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            prompt = f.read().strip()
+    except Exception as e:
+        logging.error(f"[PROMPT] Could not read prompt file: {e}")
+        return PlainTextResponse("Prompt file error", status_code=500)
 
-\begin{enumerate}
-  \item Löse die Gleichung: $3x + 5 = 20$
-  \item Berechne den Umfang eines Kreises mit Radius $r = 4$ cm.
-  \item Addiere: $\frac{2}{3} + \frac{1}{6}$
-\end{enumerate}
+    try:
+        model_name = "gemini-2.0-flash"
+        logging.info(f"[GEMINI] Using model: {model_name}")
+        logging.info(f"[GEMINI] Prompt: {prompt[:200]}{'...' if len(prompt) > 200 else ''}")
+        logging.info(f"[GEMINI] Image size: {len(image_bytes)} bytes")
+        model = genai.GenerativeModel(model_name)
+        contents = [{"data": image_bytes, "mime_type": "image/jpeg"}, prompt]
+        logging.info(f"[GEMINI] Contents: {[str(type(c)) for c in contents]}")
+        response = model.generate_content(contents)
+        logging.info(f"[GEMINI] Raw response type: {type(response)}")
+        try:
+            logging.info(f"[GEMINI] Response as dict: {response.__dict__}")
+        except Exception as e:
+            logging.info(f"[GEMINI] Could not log response as dict: {e}")
+        try:
+            logging.info(f"[GEMINI] Response dir: {dir(response)}")
+        except Exception as e:
+            logging.info(f"[GEMINI] Could not log response dir: {e}")
+        logging.info(f"[GEMINI] Response pprint: {pprint.pformat(response)}")
+        latex = getattr(response, 'text', None)
+        if not latex:
+            raise Exception(f"No LaTeX returned from Gemini API. Response: {response}")
+        logging.info(f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}")
+        latex = clean_latex(latex)
+        return PlainTextResponse(latex, media_type="text/plain")
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        logging.error(f"[GEMINI] Error: {e}\nTraceback:\n{tb}")
+        return PlainTextResponse(f"Gemini API error: {e}", status_code=500)
 
-\end{document}
-"""
-    logging.info(
-        f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}"
-    )
-    return PlainTextResponse(latex, media_type="text/plain")
+
+def clean_latex(latex: str) -> str:
+    # Remove all code block markers (```latex, ```) anywhere in the string
+    s = latex.strip()
+    s = re.sub(r'```latex', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'```', '', s)
+    return s.strip()
 
 
 @app.post("/api/compile-pdf")
@@ -80,9 +120,10 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     os.makedirs(base_dir, exist_ok=True)
     tex_path = os.path.join(base_dir, "output.tex")
     pdf_path = os.path.join(base_dir, "output.pdf")
+    latex = clean_latex(latex)
     logging.info(f"[PDF] Writing LaTeX to {tex_path}")
     async with aiofiles.open(tex_path, "w") as f:
-        await f.write(latex)
+        await f.write(latex.lstrip())
 
     # Compile with tectonic
     try:

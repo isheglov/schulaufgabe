@@ -178,16 +178,18 @@ export default function FileUpload() {
       ) : step === 'select' && file ? (
         <div className="flex flex-col items-center space-y-4">
           {file.type.startsWith("image/") ? (
-            <div className="relative w-48 h-48">
-              <Image
-                src={preview!}
-                alt="Preview"
-                fill
-                style={{ objectFit: 'contain' }}
-                className="rounded shadow"
-                sizes="192px"
-                priority
-              />
+            <div className="w-full flex flex-col items-center relative">
+              <div className="mb-6">
+                <Image
+                  src={preview!}
+                  alt="Preview"
+                  width={128}
+                  height={128}
+                  style={{ objectFit: 'contain' }}
+                  className="rounded shadow"
+                  priority
+                />
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center">
@@ -195,7 +197,7 @@ export default function FileUpload() {
               <span className="text-gray-700">{file.name}</span>
             </div>
           )}
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 mt-4">
             <button
               onClick={removeFile}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
