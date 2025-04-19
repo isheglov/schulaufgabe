@@ -47,6 +47,26 @@ def mock_generate_content(contents):
     return mock_response
 
 
+def mock_subprocess_run(*args, **kwargs):
+    # Find the output directory and PDF path from the args
+    if isinstance(args[0], list):
+        try:
+            outdir_index = args[0].index('--outdir')
+            base_dir = args[0][outdir_index + 1]
+            pdf_path = os.path.join(base_dir, "output.pdf")
+            # Create a dummy PDF file with >100 bytes
+            dummy_pdf = b'%PDF-1.4\n%Dummy PDF\n' + b'0' * 120
+            with open(pdf_path, "wb") as f:
+                f.write(dummy_pdf)
+        except Exception:
+            pass
+    mock_result = MagicMock()
+    mock_result.stdout = "Tectonic mock output"
+    mock_result.stderr = ""
+    mock_result.returncode = 0
+    return mock_result
+
+
 def test_generate_latex():
     session_id = _upload_and_get_session_id()
     with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
@@ -57,14 +77,16 @@ def test_compile_pdf():
     session_id = _upload_and_get_session_id()
     with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
         latex = _generate_latex_and_get(session_id)
-    _compile_pdf_and_get_path(session_id, latex)
+    with patch("subprocess.run", side_effect=mock_subprocess_run):
+        _compile_pdf_and_get_path(session_id, latex)
 
 
 def test_render_pdf():
     session_id = _upload_and_get_session_id()
     with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
         latex = _generate_latex_and_get(session_id)
-    _compile_pdf_and_get_path(session_id, latex)
+    with patch("subprocess.run", side_effect=mock_subprocess_run):
+        _compile_pdf_and_get_path(session_id, latex)
     response = client.get(f"/api/render-pdf?session_id={session_id}")
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
