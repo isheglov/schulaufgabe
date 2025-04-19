@@ -20,7 +20,6 @@ export default function FileUpload() {
   const [genError, setGenError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [pdfReady, setPdfReady] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'latex' | 'pdf'>('latex');
 
   // Toast auto-dismiss
@@ -87,7 +86,6 @@ export default function FileUpload() {
     setGenError(null);
     setLatex(null);
     setPdfReady(false);
-    setPdfError(null);
     try {
       const res = await fetch('http://localhost:8000/api/generate-latex', {
         method: 'POST',
@@ -106,7 +104,6 @@ export default function FileUpload() {
       });
       const pdfData = await pdfRes.json();
       if (!pdfData.success) {
-        setPdfError(pdfData.error || 'Fehler beim PDF-Export');
         setToast({ type: 'error', message: '❌ Fehler beim PDF-Export' });
         setPdfReady(false);
       } else {
@@ -129,11 +126,6 @@ export default function FileUpload() {
     if (step === 'done' && latex) return 2;
     return 0;
   };
-  const steps = [
-    'Upload',
-    'Aufgaben generieren',
-    'PDF herunterladen',
-  ];
   const currentStep = getStepIndex();
 
   return (
