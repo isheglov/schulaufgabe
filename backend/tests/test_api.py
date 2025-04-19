@@ -1,6 +1,7 @@
 import os
 from fastapi.testclient import TestClient
 from backend.main import app
+from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
@@ -40,20 +41,29 @@ def test_upload():
     _upload_and_get_session_id()
 
 
+def mock_generate_content(contents):
+    mock_response = MagicMock()
+    mock_response.text = "\\documentclass{article}\n\\begin{document}\nMocked LaTeX\n\\end{document}"
+    return mock_response
+
+
 def test_generate_latex():
     session_id = _upload_and_get_session_id()
-    _generate_latex_and_get(session_id)
+    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+        _generate_latex_and_get(session_id)
 
 
 def test_compile_pdf():
     session_id = _upload_and_get_session_id()
-    latex = _generate_latex_and_get(session_id)
+    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+        latex = _generate_latex_and_get(session_id)
     _compile_pdf_and_get_path(session_id, latex)
 
 
 def test_render_pdf():
     session_id = _upload_and_get_session_id()
-    latex = _generate_latex_and_get(session_id)
+    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+        latex = _generate_latex_and_get(session_id)
     _compile_pdf_and_get_path(session_id, latex)
     response = client.get(f"/api/render-pdf?session_id={session_id}")
     assert response.status_code == 200
