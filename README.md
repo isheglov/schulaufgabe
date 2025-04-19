@@ -36,6 +36,27 @@ npm run dev
 
 App will be available at [http://localhost:3000](http://localhost:3000)
 
+### Run linters (ESLint & TypeScript)
+```bash
+# Run ESLint
+npx eslint . --ext .ts,.tsx
+
+# Run TypeScript type check
+npx tsc --noEmit
+```
+
+### Run frontend tests (Playwright)
+```bash
+# Install Playwright and its browsers (only needed once)
+npx playwright install --with-deps
+
+# Run all Playwright tests
+npx playwright test
+
+# Run Playwright in UI mode (for debugging)
+npx playwright test --ui
+```
+
 ---
 
 ## Backend: FastAPI
@@ -60,6 +81,17 @@ uvicorn main:app --reload --app-dir backend
 ```
 
 API will be available at [http://localhost:8000/api/upload](http://localhost:8000/api/upload)
+
+### Run backend linter (flake8)
+```bash
+pip install flake8
+flake8 backend/
+```
+
+### Run backend tests (pytest)
+```bash
+pytest
+```
 
 ---
 
@@ -98,8 +130,3 @@ You can deploy both the frontend (Next.js) and backend (FastAPI) to [Render](htt
 7. Click "Create Web Service".
 
 Render will auto-deploy on every push to GitHub.
-
----
-
-## Example: Upload a file via curl
-```
