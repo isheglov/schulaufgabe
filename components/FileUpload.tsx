@@ -21,6 +21,7 @@ export default function FileUpload() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [pdfReady, setPdfReady] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'latex' | 'pdf'>('latex');
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -136,121 +137,151 @@ export default function FileUpload() {
   const currentStep = getStepIndex();
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Toast notification */}
-      {toast && (
-        <div
-          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white text-base font-medium transition-all
-            ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
-        >
-          {toast.message}
+    <div className="w-full max-w-2xl mx-auto">
+      {/* Progress Steps UI (at the very top) */}
+      <div className="w-full px-2 pt-2">
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
+          <div
+            className={`h-full transition-all duration-300 ${currentStep === 0 ? 'bg-blue-400 w-1/3' : currentStep === 1 ? 'bg-blue-500 w-2/3' : 'bg-green-500 w-full'}`}
+          ></div>
         </div>
-      )}
-      {/* Progress Steps UI */}
-      <div className="flex justify-between items-center mb-8">
-        {steps.map((label, idx) => (
-          <div key={label} className="flex-1 flex flex-col items-center">
-            <div
-              className={`w-8 h-8 flex items-center justify-center rounded-full border-2 text-sm font-bold mb-1
-                ${currentStep === idx ? 'bg-blue-600 text-white border-blue-600' : idx < currentStep ? 'bg-green-500 text-white border-green-500' : 'bg-gray-200 text-gray-400 border-gray-300'}`}
-            >
-              {idx + 1}
-            </div>
-            <span className={`text-xs ${currentStep === idx ? 'text-blue-700 font-semibold' : idx < currentStep ? 'text-green-700' : 'text-gray-400'}`}>{label}</span>
-            {idx < steps.length - 1 && (
-              <div className={`h-1 w-full ${idx < currentStep ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-            )}
-          </div>
-        ))}
       </div>
-      {step === 'select' && !file ? (
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition ${
-            isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
-          }`}
-        >
-          <input {...getInputProps()} />
-          <p className="text-gray-500">
-            Drag & drop a JPG, PNG, or PDF here, or click to select a file
-          </p>
-        </div>
-      ) : step === 'select' && file ? (
-        <div className="flex flex-col items-center space-y-4">
-          {file.type.startsWith("image/") ? (
-            <div className="w-full flex flex-col items-center relative">
-              <div className="mb-6">
-                <Image
-                  src={preview!}
-                  alt="Preview"
-                  width={128}
-                  height={128}
-                  style={{ objectFit: 'contain' }}
-                  className="rounded shadow"
-                  priority
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <span className="text-6xl">📄</span>
-              <span className="text-gray-700">{file.name}</span>
-            </div>
-          )}
-          <div className="flex space-x-2 mt-4">
-            <button
-              onClick={removeFile}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              disabled={uploading}
-            >
-              Remove / Replace
-            </button>
-            <button
-              onClick={uploadFile}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              disabled={uploading}
-            >
-              {uploading ? 'Uploading...' : 'Upload'}
-            </button>
-          </div>
-          {error && <div className="text-red-600">{error}</div>}
-        </div>
-      ) : step === 'uploading' ? (
-        <div className="text-center">Uploading...</div>
-      ) : step === 'done' && sessionId ? (
-        <div className="text-center space-y-4">
-          <div className="text-green-600 font-semibold">Upload successful!</div>
-          <div className="text-gray-700">Session ID: <span className="font-mono">{sessionId}</span></div>
-          <button
-            onClick={generateLatex}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 mt-4"
-            disabled={generating}
+      <div className="bg-white rounded-xl shadow p-8 w-full">
+        <h1 className="text-2xl font-bold mb-1">MatheCheck – KI-Hausaufgabenhilfe</h1>
+        <p className="text-gray-600 mb-6">
+          {step === 'select' ? 'Lade ein Foto der letzten Mathe-Schulaufgabe hoch' :
+            step === 'done' && !latex ? 'Super! Jetzt generieren wir eine neue Aufgabe...' :
+            'MatheCheck – KI-Hausaufgabenhilfe'}
+        </p>
+        {/* Toast notification */}
+        {toast && (
+          <div
+            className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white text-base font-medium transition-all
+              ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
           >
-            {generating ? 'Wird erstellt…' : 'Generate'}
-          </button>
-          {generating && <div className="mt-2 text-gray-500">Wird erstellt…</div>}
-          {genError && <div className="text-red-600 mt-2">{genError}</div>}
-          {latex && (
-            <div className="mt-4 text-left bg-gray-100 p-2 rounded max-h-64 overflow-auto">
-              <pre className="text-xs whitespace-pre-wrap">{latex}</pre>
+            {toast.message}
+          </div>
+        )}
+        {/* Step 1: File select/upload */}
+        {step === 'select' && !file ? (
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition ${
+              isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
+            }`}
+          >
+            <input {...getInputProps()} />
+            <p className="text-gray-500">
+              Datei auswählen oder hierher ziehen (JPG, PNG, PDF)
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Keine OCR. Alles bleibt privat.</p>
+          </div>
+        ) : step === 'select' && file ? (
+          <div className="flex flex-col items-center space-y-4">
+            {file.type.startsWith("image/") ? (
+              <div className="w-full flex flex-col items-center relative">
+                <div className="mb-6">
+                  <Image
+                    src={preview!}
+                    alt="Preview"
+                    width={128}
+                    height={128}
+                    style={{ objectFit: 'contain' }}
+                    className="rounded shadow"
+                    priority
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="text-6xl">📄</span>
+                <span className="text-gray-700">{file.name}</span>
+              </div>
+            )}
+            <div className="flex space-x-2 mt-4">
+              <button
+                onClick={removeFile}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                disabled={uploading}
+              >
+                Entfernen / Ersetzen
+              </button>
+              <button
+                onClick={uploadFile}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={uploading}
+              >
+                {uploading ? 'Hochladen...' : 'Hochladen'}
+              </button>
             </div>
-          )}
-          {pdfError && (
-            <div className="mt-2 text-red-600">{pdfError}</div>
-          )}
-          {pdfReady && latex && sessionId && (
-            <a
-              href={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
-              className="inline-block mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold"
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+            {error && <div className="text-red-600">{error}</div>}
+          </div>
+        ) : step === 'uploading' ? (
+          <div className="text-center">Hochladen...</div>
+        ) : step === 'done' && sessionId && !latex ? (
+          <div className="text-center space-y-4">
+            <div className="text-green-600 font-semibold">Upload erfolgreich!</div>
+            <button
+              onClick={generateLatex}
+              className="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-800 mt-4"
+              disabled={generating}
             >
-              Neue Schulaufgabe als PDF herunterladen
-            </a>
-          )}
-        </div>
-      ) : null}
+              {generating ? 'Wird erstellt…' : 'Ähnliche Schulaufgabe erstellen'}
+            </button>
+            {generating && <div className="mt-2 text-gray-500">Wird erstellt…</div>}
+            {genError && <div className="text-red-600 mt-2">{genError}</div>}
+          </div>
+        ) : step === 'done' && sessionId && latex ? (
+          <div className="w-full">
+            {/* Tab Switcher */}
+            <div className="flex mb-4">
+              <button
+                className={`px-4 py-2 rounded-tl rounded-tr-none rounded-bl border-b-2 ${activeTab === 'latex' ? 'bg-gray-100 border-blue-600 text-blue-700 font-semibold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+                onClick={() => setActiveTab('latex')}
+              >
+                LaTeX Code
+              </button>
+              <button
+                className={`px-4 py-2 rounded-tr rounded-tl-none rounded-br border-b-2 ${activeTab === 'pdf' ? 'bg-gray-100 border-blue-600 text-blue-700 font-semibold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+                onClick={() => setActiveTab('pdf')}
+              >
+                PDF Vorschau
+              </button>
+            </div>
+            {/* Tab Content */}
+            <div className="bg-gray-100 rounded-b p-4 min-h-[180px]">
+              {activeTab === 'latex' ? (
+                <textarea
+                  className="w-full h-40 p-2 rounded bg-white border border-gray-200 text-sm font-mono resize-none"
+                  value={latex}
+                  readOnly
+                />
+              ) : (
+                pdfReady ? (
+                  <iframe
+                    src={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
+                    title="PDF Vorschau"
+                    className="w-full h-40 bg-white rounded border border-gray-200"
+                  />
+                ) : (
+                  <div className="text-gray-400 text-center py-12">PDF Vorschau (Platzhalter)</div>
+                )
+              )}
+            </div>
+            <div className="flex justify-end mt-6">
+              <a
+                href={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
+                className="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-800 font-semibold"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Neue Schulaufgabe als PDF herunterladen
+              </a>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
