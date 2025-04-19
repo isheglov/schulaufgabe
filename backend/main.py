@@ -76,8 +76,6 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     """
     Receives session_id and LaTeX string, compiles to PDF using tectonic, saves as /tmp/{session_id}/output.pdf
     """
-    import shutil
-
     base_dir = f"/tmp/{session_id}"
     os.makedirs(base_dir, exist_ok=True)
     tex_path = os.path.join(base_dir, "output.tex")

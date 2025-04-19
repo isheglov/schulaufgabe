@@ -1,12 +1,18 @@
-import { compat } from 'eslint-flat-config-utils';
+import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
-import next from '@next/eslint-plugin-next';
-import tseslint from 'typescript-eslint';
+
+const compat = new FlatCompat();
 
 export default [
   js.configs.recommended,
-  ...compat(tseslint.configs.recommended),
-  ...compat(next.configs.recommended),
+  ...compat.config({
+    extends: [
+      'plugin:@next/next/recommended',
+      'plugin:@typescript-eslint/recommended',
+    ],
+    plugins: ['@typescript-eslint'],
+    parser: '@typescript-eslint/parser',
+  }),
   {
     ignores: [
       'node_modules/',

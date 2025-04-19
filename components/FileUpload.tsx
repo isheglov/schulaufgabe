@@ -18,6 +18,8 @@ export default function FileUpload() {
   const [latex, setLatex] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [pdfReady, setPdfReady] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -82,6 +84,8 @@ export default function FileUpload() {
     setGenerating(true);
     setGenError(null);
     setLatex(null);
+    setPdfReady(false);
+    setPdfError(null);
     try {
       const res = await fetch('http://localhost:8000/api/generate-latex', {
         method: 'POST',
@@ -92,9 +96,24 @@ export default function FileUpload() {
       const text = await res.text();
       setLatex(text);
       setToast({ type: 'success', message: '✅ Aufgabe erfolgreich generiert' });
+      // Compile PDF automatically
+      const pdfRes = await fetch('http://localhost:8000/api/compile-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, latex: text }),
+      });
+      const pdfData = await pdfRes.json();
+      if (!pdfData.success) {
+        setPdfError(pdfData.error || 'Fehler beim PDF-Export');
+        setToast({ type: 'error', message: '❌ Fehler beim PDF-Export' });
+        setPdfReady(false);
+      } else {
+        setPdfReady(true);
+      }
     } catch (err: any) {
       setGenError(err.message || 'Fehler beim Generieren');
       setToast({ type: 'error', message: '❌ Fehler beim Generieren' });
+      setPdfReady(false);
     } finally {
       setGenerating(false);
     }
@@ -207,7 +226,10 @@ export default function FileUpload() {
               <pre className="text-xs whitespace-pre-wrap">{latex}</pre>
             </div>
           )}
-          {latex && sessionId && (
+          {pdfError && (
+            <div className="mt-2 text-red-600">{pdfError}</div>
+          )}
+          {pdfReady && latex && sessionId && (
             <a
               href={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
               className="inline-block mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold"

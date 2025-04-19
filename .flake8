@@ -1,0 +1,21 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E501
+exclude =
+    node_modules,
+    .next,
+    dist,
+    build,
+    out,
+    venv,
+    ENV,
+    .venv,
+    .git,
+    components,
+    pages,
+    public,
+    eslint.config.js,
+    *.json,
+    *.md,
+    *.lock,
+    *.log 

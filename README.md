@@ -70,5 +70,42 @@ curl -F "file=@/path/to/your/test.jpg" http://localhost:8000/api/upload
 
 ---
 
+## Linting & Code Style
+
+### Frontend (TypeScript/Next.js)
+
+1. Install dependencies (if not already):
+   ```bash
+   npm install
+   ```
+2. Run ESLint:
+   ```bash
+   npx eslint . --ext .ts,.tsx
+   ```
+
+### Backend (Python)
+
+1. Activate your virtual environment:
+   ```bash
+   source backend/venv/bin/activate
+   # or for fish shell:
+   source backend/venv/bin/activate.fish
+   ```
+2. Install flake8 and black (if not already):
+   ```bash
+   pip install flake8 black
+   ```
+3. Run flake8:
+   ```bash
+   flake8 backend/
+   ```
+4. Run black (to check formatting):
+   ```bash
+   black --check backend/
+   ```
+   (or to auto-format: `black backend/`)
+
+---
+
 ## License
 MIT 
