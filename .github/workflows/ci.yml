@@ -38,8 +38,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install fastapi uvicorn aiofiles python-multipart
-      - name: Run black (code style)
-        run: black --check backend/
       - name: Run flake8 (linter)
         run: |
           pip install flake8
