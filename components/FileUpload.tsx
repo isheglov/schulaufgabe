@@ -8,8 +8,6 @@ const ACCEPTED_TYPES = {
   "application/pdf": [],
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 export default function FileUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
