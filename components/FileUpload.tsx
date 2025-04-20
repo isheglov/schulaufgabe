@@ -8,6 +8,8 @@ const ACCEPTED_TYPES = {
   "application/pdf": [],
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function FileUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function FileUpload() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://localhost:8000/api/upload', {
+      const res = await fetch(`${API_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -87,7 +89,7 @@ export default function FileUpload() {
     setLatex(null);
     setPdfReady(false);
     try {
-      const res = await fetch('http://localhost:8000/api/generate-latex', {
+      const res = await fetch(`${API_URL}/api/generate-latex`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
@@ -97,7 +99,7 @@ export default function FileUpload() {
       setLatex(text);
       setToast({ type: 'success', message: '✅ Aufgabe erfolgreich generiert' });
       // Compile PDF automatically
-      const pdfRes = await fetch('http://localhost:8000/api/compile-pdf', {
+      const pdfRes = await fetch(`${API_URL}/api/compile-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, latex: text }),
@@ -128,6 +130,7 @@ export default function FileUpload() {
   };
   const currentStep = getStepIndex();
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Progress Steps UI (at the very top) */}
@@ -251,7 +254,7 @@ export default function FileUpload() {
               ) : (
                 pdfReady ? (
                   <iframe
-                    src={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
+                    src={`${API_URL}/api/render-pdf?session_id=${sessionId}`}
                     title="PDF Vorschau"
                     className="w-full h-40 bg-white rounded border border-gray-200"
                   />
@@ -262,7 +265,7 @@ export default function FileUpload() {
             </div>
             <div className="flex justify-end mt-6">
               <a
-                href={`http://localhost:8000/api/render-pdf?session_id=${sessionId}`}
+                href={`${API_URL}/api/render-pdf?session_id=${sessionId}`}
                 className="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-800 font-semibold"
                 download
                 target="_blank"
