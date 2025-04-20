@@ -75,6 +75,6 @@ jobs:
         shell: bash
       - name: Wait for services
         run: |
-          npx wait-on http://localhost:3000 http://localhost:8000
+          npx wait-on --timeout 120000 --interval 1000 --verbose http://localhost:3000 http://localhost:8000
       - name: Run Playwright tests
         run: npx playwright test 
