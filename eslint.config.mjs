@@ -5,6 +5,18 @@ const compat = new FlatCompat();
 
 export default [
   js.configs.recommended,
+  {
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: {
+        module: 'writable',
+        require: 'writable',
+        __dirname: 'writable',
+        process: 'writable',
+        exports: 'writable',
+      },
+    },
+  },
   ...compat.config({
     extends: [
       'plugin:@next/next/recommended',
