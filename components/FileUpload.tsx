@@ -9,6 +9,7 @@ const ACCEPTED_TYPES = {
 };
 
 export default function FileUpload() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -128,7 +129,6 @@ export default function FileUpload() {
   };
   const currentStep = getStepIndex();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Progress Steps UI (at the very top) */}
