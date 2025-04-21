@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+aiofiles
+python-multipart
+google-generativeai
+python-dotenv
+pydantic
+pytest
+httpx
+Pillow
