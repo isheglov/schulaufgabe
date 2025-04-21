@@ -18,5 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application
 COPY . .
 
-# Run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "${PORT:-8000}"]
+# Create a startup script to handle environment variables
+RUN echo '#!/bin/bash\nuvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}' > /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Run the application using the startup script
+CMD ["/bin/bash", "/app/start.sh"]
