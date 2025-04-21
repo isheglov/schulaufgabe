@@ -27,6 +27,12 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def root():
+    """Health check endpoint for CI and monitoring"""
+    return {"status": "ok", "service": "schulaufgabe-backend"}
+
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     session_id = str(uuid.uuid4())
