@@ -31,4 +31,4 @@ test('full upload and worksheet generation flow', async ({ page }) => {
   // Wait for LaTeX preview and PDF download button
   await expect(page.getByText(/Aufgabe erfolgreich generiert/i)).toBeVisible();
   await expect(page.getByRole('link', { name: /pdf herunterladen/i })).toBeVisible();
-}); 
+});

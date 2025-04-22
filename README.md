@@ -95,6 +95,43 @@ pytest
 
 ---
 
+## Security Checks
+
+The project uses pre-commit hooks to prevent accidental commitment of sensitive information.
+
+### Setting up Pre-commit Hooks
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install the git hooks
+pre-commit install
+```
+
+This will automatically run the following checks before each commit:
+- Detect-secrets: Scans for API keys, tokens, and other sensitive data
+- Detect-private-key: Prevents committing private keys
+- Flake8: Linting for Python code
+- Black: Code formatting for Python
+- isort: Sorts imports correctly
+
+### Manual Security Checks
+
+```bash
+# Check for secrets in your code
+pre-commit run detect-secrets --all-files
+
+# Run all pre-commit hooks on all files
+pre-commit run --all-files
+```
+
+### Environment Variables
+
+Never commit real credentials. Use the `.env.example` file as a template and create your own `.env` file with your actual credentials. The `.env` file is listed in `.gitignore` and will not be committed.
+
+---
+
 ## Deploying to Render (Free Hosting)
 
 You can deploy both the frontend (Next.js) and backend (FastAPI) to [Render](https://render.com/) for free:

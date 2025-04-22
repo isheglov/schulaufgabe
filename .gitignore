@@ -72,3 +72,20 @@ env/
 venv/
 ENV/
 backend/venv/
+py-*
+
+# Security related
+*.pem
+*.key
+*.der
+*.p12
+*.pfx
+*.keystore
+*.jks
+*credential*
+*secret*
+*_rsa
+*_dsa
+*_ed25519
+*_ecdsa
+.secrets/

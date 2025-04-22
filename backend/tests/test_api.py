@@ -1,7 +1,9 @@
 import os
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
+
 from backend.main import app
-from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
@@ -43,7 +45,9 @@ def test_upload():
 
 def mock_generate_content(contents):
     mock_response = MagicMock()
-    mock_response.text = "\\documentclass{article}\n\\begin{document}\nMocked LaTeX\n\\end{document}"
+    mock_response.text = (
+        "\\documentclass{article}\n\\begin{document}\nMocked LaTeX\n\\end{document}"
+    )
     return mock_response
 
 
@@ -51,11 +55,11 @@ def mock_subprocess_run(*args, **kwargs):
     # Find the output directory and PDF path from the args
     if isinstance(args[0], list):
         try:
-            outdir_index = args[0].index('--outdir')
+            outdir_index = args[0].index("--outdir")
             base_dir = args[0][outdir_index + 1]
             pdf_path = os.path.join(base_dir, "output.pdf")
             # Create a dummy PDF file with >100 bytes
-            dummy_pdf = b'%PDF-1.4\n%Dummy PDF\n' + b'0' * 120
+            dummy_pdf = b"%PDF-1.4\n%Dummy PDF\n" + b"0" * 120
             with open(pdf_path, "wb") as f:
                 f.write(dummy_pdf)
         except Exception:
@@ -69,13 +73,19 @@ def mock_subprocess_run(*args, **kwargs):
 
 def test_generate_latex():
     session_id = _upload_and_get_session_id()
-    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+    with patch(
+        "google.generativeai.GenerativeModel.generate_content",
+        side_effect=mock_generate_content,
+    ):
         _generate_latex_and_get(session_id)
 
 
 def test_compile_pdf():
     session_id = _upload_and_get_session_id()
-    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+    with patch(
+        "google.generativeai.GenerativeModel.generate_content",
+        side_effect=mock_generate_content,
+    ):
         latex = _generate_latex_and_get(session_id)
     with patch("subprocess.run", side_effect=mock_subprocess_run):
         _compile_pdf_and_get_path(session_id, latex)
@@ -83,7 +93,10 @@ def test_compile_pdf():
 
 def test_render_pdf():
     session_id = _upload_and_get_session_id()
-    with patch("google.generativeai.GenerativeModel.generate_content", side_effect=mock_generate_content):
+    with patch(
+        "google.generativeai.GenerativeModel.generate_content",
+        side_effect=mock_generate_content,
+    ):
         latex = _generate_latex_and_get(session_id)
     with patch("subprocess.run", side_effect=mock_subprocess_run):
         _compile_pdf_and_get_path(session_id, latex)

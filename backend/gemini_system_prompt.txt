@@ -7,4 +7,4 @@ Your tasks:
 3. Return the new worksheet as a complete LaTeX document, formatted for A4 paper and ready for PDF generation.
 
 Output:
-Only return the LaTeX code for the new worksheet. Do not include any explanations or extra text. 
+Only return the LaTeX code for the new worksheet. Do not include any explanations or extra text.

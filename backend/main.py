@@ -1,15 +1,16 @@
-import os
-import uuid
-from fastapi import FastAPI, File, UploadFile, Body
-from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
-import aiofiles
-import subprocess
-from fastapi.middleware.cors import CORSMiddleware
 import logging
-import google.generativeai as genai
-from dotenv import load_dotenv
+import os
 import pprint
 import re
+import subprocess
+import uuid
+
+import aiofiles
+import google.generativeai as genai
+from dotenv import load_dotenv
+from fastapi import Body, FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,7 +20,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://schulaufgabe-frontend.onrender.com"
+        "https://schulaufgabe-frontend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -91,7 +92,9 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
     try:
         model_name = "gemini-2.0-flash"
         logging.info(f"[GEMINI] Using model: {model_name}")
-        logging.info(f"[GEMINI] Prompt: {prompt[:200]}{'...' if len(prompt) > 200 else ''}")
+        logging.info(
+            f"[GEMINI] Prompt: {prompt[:200]}{'...' if len(prompt) > 200 else ''}"
+        )
         logging.info(f"[GEMINI] Image size: {len(image_bytes)} bytes")
         model = genai.GenerativeModel(model_name)
         contents = [{"data": image_bytes, "mime_type": "image/jpeg"}, prompt]
@@ -107,14 +110,17 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
         except Exception as e:
             logging.info(f"[GEMINI] Could not log response dir: {e}")
         logging.info(f"[GEMINI] Response pprint: {pprint.pformat(response)}")
-        latex = getattr(response, 'text', None)
+        latex = getattr(response, "text", None)
         if not latex:
             raise Exception(f"No LaTeX returned from Gemini API. Response: {response}")
-        logging.info(f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}")
+        logging.info(
+            f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}"
+        )
         latex = clean_latex(latex)
         return PlainTextResponse(latex, media_type="text/plain")
     except Exception as e:
         import traceback
+
         tb = traceback.format_exc()
         logging.error(f"[GEMINI] Error: {e}\nTraceback:\n{tb}")
         return PlainTextResponse(f"Gemini API error: {e}", status_code=500)
@@ -123,8 +129,8 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
 def clean_latex(latex: str) -> str:
     # Remove all code block markers (```latex, ```) anywhere in the string
     s = latex.strip()
-    s = re.sub(r'```latex', '', s, flags=re.IGNORECASE)
-    s = re.sub(r'```', '', s)
+    s = re.sub(r"```latex", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"```", "", s)
     return s.strip()
 
 
@@ -150,7 +156,9 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
         logging.info("[TEST MODE] Skipping actual PDF compilation, creating mock PDF")
         # Create a minimal valid PDF file for testing
         with open(pdf_path, "wb") as f:
-            f.write(b"%PDF-1.5\n%Mock PDF for testing\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000017 00000 n\n0000000065 00000 n\n0000000123 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n193\n%%EOF")
+            f.write(
+                b"%PDF-1.5\n%Mock PDF for testing\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000017 00000 n\n0000000065 00000 n\n0000000123 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n193\n%%EOF"
+            )
         return {"success": True, "pdf_path": pdf_path}
 
     # Compile with tectonic (non-test mode)

@@ -43,7 +43,7 @@ jobs:
           pip install flake8
           flake8 backend/
       - name: Set test environment variables
-        run: echo "GOOGLE_API_KEY=dummy" >> $GITHUB_ENV
+        run: echo "GOOGLE_API_KEY=dummy_key_for_testing" >> $GITHUB_ENV #pragma: allowlist secret
       - name: Run backend tests
         run: pytest backend/tests
 
@@ -62,7 +62,7 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Start backend
-        run: |
+        run: | #pragma: allowlist secret
           python3 -m venv venv
           source venv/bin/activate
           pip install -r backend/requirements.txt
@@ -97,4 +97,4 @@ jobs:
           echo "Frontend is ready, continuing with tests."
         shell: bash
       - name: Run Playwright tests
-        run: npx playwright test 
+        run: npx playwright test

@@ -7,4 +7,4 @@ dotenv
 pydantic
 pytest
 httpx
-Pillow 
+Pillow
