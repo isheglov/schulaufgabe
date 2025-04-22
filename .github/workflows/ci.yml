@@ -66,8 +66,10 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install -r backend/requirements.txt
-          # Set necessary environment variables
-          echo "GOOGLE_API_KEY=dummy" > backend/.env
+          # Set necessary environment variables for testing
+          echo "GOOGLE_API_KEY=dummy_key_for_testing" > backend/.env
+          echo "TEST_MODE=1" >> backend/.env
+          cat backend/.env
           # Change to the project root and run uvicorn with full debugging
           cd /home/runner/work/schulaufgabe/schulaufgabe
           PYTHONPATH=/home/runner/work/schulaufgabe/schulaufgabe python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug &
