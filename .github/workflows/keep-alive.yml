@@ -2,7 +2,7 @@ name: Keep Render Services Alive
 
 on:
   schedule:
-    - cron: "*/13 * * * *"  # Every 13 minutes
+    - cron: "*/13 6-23 * * *"  # Every 13 minutes between 6am and 11pm
 
 jobs:
   keepalive:
@@ -10,7 +10,13 @@ jobs:
     steps:
       - name: Ping frontend
         run: |
+          JITTER=$((RANDOM % 120 + 1))
+          echo "Sleeping for $JITTER seconds before ping..."
+          sleep $JITTER
           curl -fsS https://schulaufgabe-frontend.onrender.com > /dev/null || echo "Ping failed"
       - name: Ping backend
         run: |
-          curl -fsS https://schulaufgabe-backend.onrender.com > /dev/null || echo "Ping failed"
+          JITTER=$((RANDOM % 120 + 1))
+          echo "Sleeping for $JITTER seconds before ping..."
+          sleep $JITTER
+          curl -fsS https://schulaufgabe-backend-docker.onrender.com > /dev/null || echo "Ping failed"
