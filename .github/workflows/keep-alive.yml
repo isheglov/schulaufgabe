@@ -1,0 +1,16 @@
+name: Keep Render Services Alive
+
+on:
+  schedule:
+    - cron: "*/13 * * * *"  # Every 13 minutes
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping frontend
+        run: |
+          curl -fsS https://schulaufgabe-frontend.onrender.com > /dev/null || echo "Ping failed"
+      - name: Ping backend
+        run: |
+          curl -fsS https://schulaufgabe-backend.onrender.com > /dev/null || echo "Ping failed"
