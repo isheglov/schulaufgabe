@@ -10,7 +10,6 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import pprint
 import re
-import shutil
 
 logging.basicConfig(level=logging.INFO)
 
@@ -54,7 +53,7 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
     Receives a session_id, loads the image, sends it to Gemini, and returns LaTeX.
     """
     load_dotenv()
-    
+
     # Check if we're in test mode
     TEST_MODE = os.getenv("TEST_MODE", "0") == "1"
     if TEST_MODE:
@@ -62,7 +61,7 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
         # Return a successful mock response
         mock_latex = r"\documentclass{article}\usepackage{amsmath}\begin{document}\section*{Test Worksheet}\begin{enumerate}\item $2+2=4$\item $\frac{1}{2} + \frac{1}{3} = \frac{5}{6}$\end{enumerate}\end{document}"
         return PlainTextResponse(mock_latex, media_type="text/plain")
-    
+
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         logging.error("[GEMINI] GOOGLE_API_KEY not set in environment.")
@@ -140,20 +139,20 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     pdf_path = os.path.join(base_dir, "output.pdf")
     latex = clean_latex(latex)
     logging.info(f"[PDF] Writing LaTeX to {tex_path}")
-    
+
     # Check if we're in test mode
     TEST_MODE = os.getenv("TEST_MODE", "0") == "1"
-    
+
     async with aiofiles.open(tex_path, "w") as f:
         await f.write(latex.lstrip())
-    
+
     if TEST_MODE:
         logging.info("[TEST MODE] Skipping actual PDF compilation, creating mock PDF")
         # Create a minimal valid PDF file for testing
         with open(pdf_path, "wb") as f:
             f.write(b"%PDF-1.5\n%Mock PDF for testing\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000017 00000 n\n0000000065 00000 n\n0000000123 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n193\n%%EOF")
         return {"success": True, "pdf_path": pdf_path}
-    
+
     # Compile with tectonic (non-test mode)
     try:
         logging.info(f"[PDF] Running tectonic for {tex_path}")
