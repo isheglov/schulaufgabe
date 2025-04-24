@@ -8,3 +8,5 @@ pydantic
 pytest
 httpx
 Pillow
+prometheus-client
+pytest-cov

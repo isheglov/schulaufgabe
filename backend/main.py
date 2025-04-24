@@ -3,14 +3,22 @@ import os
 import pprint
 import re
 import subprocess
+import time
 import uuid
 
 import aiofiles
 import google.generativeai as genai
 from dotenv import load_dotenv
-from fastapi import Body, FastAPI, File, UploadFile
+from fastapi import Body, FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,6 +35,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prometheus metrics
+# Counter metrics
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total number of HTTP requests",
+    ["method", "endpoint", "status"],
+)
+UPLOAD_COUNT = Counter("upload_total", "Total number of file uploads")
+LATEX_GENERATION_COUNT = Counter(
+    "latex_generation_total", "Total number of LaTeX generations", ["status"]
+)
+PDF_COMPILATION_COUNT = Counter(
+    "pdf_compilation_total", "Total number of PDF compilations", ["status"]
+)
+
+# Timing metrics
+REQUEST_TIME = Histogram(
+    "request_processing_seconds",
+    "Time spent processing request",
+    ["method", "endpoint"],
+)
+LATEX_GENERATION_TIME = Histogram(
+    "latex_generation_seconds", "Time spent generating LaTeX"
+)
+PDF_COMPILATION_TIME = Histogram("pdf_compilation_seconds", "Time spent compiling PDF")
+
+# Gauge metrics
+ACTIVE_SESSIONS = Gauge("active_sessions", "Number of active sessions")
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    REQUEST_TIME.labels(request.method, request.url.path).observe(process_time)
+    REQUEST_COUNT.labels(request.method, request.url.path, response.status_code).inc()
+    return response
+
+
+@app.get("/metrics")
+async def metrics():
+    return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 @app.get("/")
 async def root():
@@ -36,6 +88,7 @@ async def root():
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
+    UPLOAD_COUNT.inc()
     session_id = str(uuid.uuid4())
     upload_dir = f"/tmp/{session_id}"
     os.makedirs(upload_dir, exist_ok=True)
@@ -45,6 +98,7 @@ async def upload_file(file: UploadFile = File(...)):
         content = await file.read()
         await out_file.write(content)
     logging.info(f"[UPLOAD] File saved. Returning session_id: {session_id}")
+    ACTIVE_SESSIONS.inc()
     return JSONResponse({"session_id": session_id})
 
 
@@ -53,6 +107,7 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
     """
     Receives a session_id, loads the image, sends it to Gemini, and returns LaTeX.
     """
+    start_time = time.time()
     load_dotenv()
 
     # Check if we're in test mode
@@ -117,12 +172,16 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
             f"[LATEX] Returning LaTeX for session_id={session_id}, length={len(latex)}"
         )
         latex = clean_latex(latex)
+        LATEX_GENERATION_COUNT.labels("success").inc()
+        LATEX_GENERATION_TIME.observe(time.time() - start_time)
         return PlainTextResponse(latex, media_type="text/plain")
     except Exception as e:
         import traceback
 
         tb = traceback.format_exc()
         logging.error(f"[GEMINI] Error: {e}\nTraceback:\n{tb}")
+        LATEX_GENERATION_COUNT.labels("failure").inc()
+        LATEX_GENERATION_TIME.observe(time.time() - start_time)
         return PlainTextResponse(f"Gemini API error: {e}", status_code=500)
 
 
@@ -139,6 +198,7 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     """
     Receives session_id and LaTeX string, compiles to PDF using tectonic, saves as /tmp/{session_id}/output.pdf
     """
+    start_time = time.time()
     base_dir = f"/tmp/{session_id}"
     os.makedirs(base_dir, exist_ok=True)
     tex_path = os.path.join(base_dir, "output.tex")
@@ -159,6 +219,8 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
             f.write(
                 b"%PDF-1.5\n%Mock PDF for testing\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000017 00000 n\n0000000065 00000 n\n0000000123 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n193\n%%EOF"
             )
+        PDF_COMPILATION_COUNT.labels("success").inc()
+        PDF_COMPILATION_TIME.observe(time.time() - start_time)
         return {"success": True, "pdf_path": pdf_path}
 
     # Compile with tectonic (non-test mode)
@@ -183,6 +245,8 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
         logging.info(f"[PDF] Tectonic stderr: {result.stderr}")
     except subprocess.CalledProcessError as e:
         logging.error(f"[PDF] Tectonic failed: {e.stderr}")
+        PDF_COMPILATION_COUNT.labels("failure").inc()
+        PDF_COMPILATION_TIME.observe(time.time() - start_time)
         return {"success": False, "error": e.stderr}
 
     # Clean up .tex file
@@ -195,9 +259,13 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     # Check PDF exists
     if not os.path.exists(pdf_path):
         logging.error(f"[PDF] PDF not generated: {pdf_path}")
+        PDF_COMPILATION_COUNT.labels("failure").inc()
+        PDF_COMPILATION_TIME.observe(time.time() - start_time)
         return {"success": False, "error": "PDF not generated"}
     logging.info(f"[PDF] PDF generated: {pdf_path}")
 
+    PDF_COMPILATION_COUNT.labels("success").inc()
+    PDF_COMPILATION_TIME.observe(time.time() - start_time)
     return {"success": True, "pdf_path": pdf_path}
 
 
@@ -206,6 +274,7 @@ async def render_pdf(session_id: str):
     """
     Streams the compiled PDF for the given session_id.
     """
+    ACTIVE_SESSIONS.dec()
     pdf_path = f"/tmp/{session_id}/output.pdf"
     logging.info(f"[RENDER] Requested PDF for session_id={session_id}, path={pdf_path}")
     if not os.path.exists(pdf_path):
