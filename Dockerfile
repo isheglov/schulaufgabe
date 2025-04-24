@@ -16,7 +16,9 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | s
 # Set up the Python environment
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./backend-requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -r backend-requirements.txt && \
+    pip install prometheus-client
 
 # Copy the application
 COPY . .
