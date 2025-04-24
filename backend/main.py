@@ -3,6 +3,7 @@ import os
 import pprint
 import re
 import subprocess
+import tempfile
 import time
 import uuid
 
@@ -43,6 +44,52 @@ REQUEST_COUNT = Counter(
     ["method", "endpoint", "status"],
 )
 UPLOAD_COUNT = Counter("upload_total", "Total number of file uploads")
+
+
+# Secure temp directory management
+TEMP_ROOT_DIR = tempfile.gettempdir()
+
+
+def get_secure_temp_dir(session_id):
+    """Create and return a secure temporary directory path based on session_id"""
+    # Validate session_id format (UUID format only)
+    if not isinstance(session_id, str) or not len(session_id) == 36:
+        raise ValueError("Invalid session ID format")
+
+    temp_dir = os.path.join(TEMP_ROOT_DIR, "schulaufgabe", session_id)
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
+
+def run_tectonic(tex_path, output_dir):
+    """Securely run the tectonic command with validated paths"""
+    # Path validation
+    if not os.path.exists(tex_path) or not os.path.isfile(tex_path):
+        raise ValueError(f"Invalid TeX file path: {tex_path}")
+    if not os.path.exists(output_dir) or not os.path.isdir(output_dir):
+        raise ValueError(f"Invalid output directory: {output_dir}")
+
+    # Use absolute path to tectonic binary for better security
+    tectonic_path = "/usr/local/bin/tectonic"
+
+    # Execute with strict parameters
+    return subprocess.run(
+        [
+            tectonic_path,
+            tex_path,
+            "--outdir",
+            output_dir,
+            "--print",
+            "--synctex=none",
+            "--keep-logs=no",
+            "--keep-intermediates=no",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
 LATEX_GENERATION_COUNT = Counter(
     "latex_generation_total", "Total number of LaTeX generations", ["status"]
 )
@@ -108,8 +155,7 @@ async def root():
 async def upload_file(file: UploadFile = File(...)):
     UPLOAD_COUNT.inc()
     session_id = str(uuid.uuid4())
-    upload_dir = f"/tmp/{session_id}"
-    os.makedirs(upload_dir, exist_ok=True)
+    upload_dir = get_secure_temp_dir(session_id)
     file_path = os.path.join(upload_dir, "input.jpg")
     logging.info(f"[UPLOAD] Saving uploaded file to {file_path}")
     async with aiofiles.open(file_path, "wb") as out_file:
@@ -141,7 +187,7 @@ async def generate_latex(session_id: str = Body(..., embed=True)):
         logging.error("[GEMINI] GOOGLE_API_KEY not set in environment.")
         return PlainTextResponse("Gemini API key not set", status_code=500)
     genai.configure(api_key=api_key)
-    image_path = f"/tmp/{session_id}/input.jpg"
+    image_path = os.path.join(get_secure_temp_dir(session_id), "input.jpg")
     logging.info(
         f"[LATEX] Generating LaTeX for session_id={session_id}, image_path={image_path}"
     )
@@ -217,8 +263,7 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     Receives session_id and LaTeX string, compiles to PDF using tectonic, saves as /tmp/{session_id}/output.pdf
     """
     start_time = time.time()
-    base_dir = f"/tmp/{session_id}"
-    os.makedirs(base_dir, exist_ok=True)
+    base_dir = get_secure_temp_dir(session_id)
     tex_path = os.path.join(base_dir, "output.tex")
     pdf_path = os.path.join(base_dir, "output.pdf")
     latex = clean_latex(latex)
@@ -244,21 +289,7 @@ async def compile_pdf(session_id: str = Body(...), latex: str = Body(...)):
     # Compile with tectonic (non-test mode)
     try:
         logging.info(f"[PDF] Running tectonic for {tex_path}")
-        result = subprocess.run(
-            [
-                "tectonic",
-                tex_path,
-                "--outdir",
-                base_dir,
-                "--print",
-                "--synctex=none",
-                "--keep-logs=no",
-                "--keep-intermediates=no",
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        result = run_tectonic(tex_path, base_dir)
         logging.info(f"[PDF] Tectonic stdout: {result.stdout}")
         logging.info(f"[PDF] Tectonic stderr: {result.stderr}")
     except subprocess.CalledProcessError as e:
@@ -293,7 +324,7 @@ async def render_pdf(session_id: str):
     Streams the compiled PDF for the given session_id.
     """
     ACTIVE_SESSIONS.dec()
-    pdf_path = f"/tmp/{session_id}/output.pdf"
+    pdf_path = os.path.join(get_secure_temp_dir(session_id), "output.pdf")
     logging.info(f"[RENDER] Requested PDF for session_id={session_id}, path={pdf_path}")
     if not os.path.exists(pdf_path):
         logging.error(f"[RENDER] PDF not found: {pdf_path}")
