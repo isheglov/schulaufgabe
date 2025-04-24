@@ -9,5 +9,6 @@ services:
       - key: PORT
         value: 9090
     autoDeploy: true
+    region: frankfurt # Default: oregon
     plan: free
     healthCheckPath: /-/healthy
