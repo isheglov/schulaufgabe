@@ -77,7 +77,25 @@ async def metrics_middleware(request: Request, call_next):
 
 @app.get("/metrics")
 async def metrics():
-    return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    # Ensure the response has proper headers for production
+    content = generate_latest()
+    response = PlainTextResponse(content, media_type=CONTENT_TYPE_LATEST)
+    # Add CORS headers explicitly for this endpoint
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    return response
+
+
+# Adding an API version of the metrics endpoint as a fallback
+
+
+@app.get("/api/metrics")
+async def api_metrics():
+    content = generate_latest()
+    response = PlainTextResponse(content, media_type=CONTENT_TYPE_LATEST)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    return response
 
 
 @app.get("/")
