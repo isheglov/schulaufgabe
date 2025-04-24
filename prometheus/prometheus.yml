@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'schulaufgabe-backend'
+    scheme: https
+    static_configs:
+      - targets: ['schulaufgabe-backend-docker.onrender.com']
+    metrics_path: /metrics
+    # Add basic auth if needed in the future
+    # basic_auth:
+    #   username: prometheus
+    #   password: secure_password
+
+  # Self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

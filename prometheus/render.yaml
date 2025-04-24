@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: schulaufgabe-prometheus
+    runtime: docker
+    repo: https://github.com/isheglov/schulaufgabe.git
+    rootDir: prometheus
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 9090
+    autoDeploy: true
+    plan: free
+    healthCheckPath: /-/healthy
