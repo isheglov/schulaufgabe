@@ -1,23 +1,17 @@
 FROM prom/prometheus:latest
 
-# Install dependencies for environment variable substitution
-USER root
-RUN apt-get update && apt-get install -y gettext-base && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Copy the Prometheus configuration template
 COPY prometheus.yml /etc/prometheus/prometheus.yml.template
 
-# Set permissions for prometheus directories
-RUN mkdir -p /prometheus && \
-    chown -R nobody:nobody /prometheus /etc/prometheus
-
-# Create startup script to handle environment variable substitution
-RUN echo '#!/bin/sh\n\
-envsubst < /etc/prometheus/prometheus.yml.template > /etc/prometheus/prometheus.yml\n\
-exec /bin/prometheus "$@"' > /usr/local/bin/start-prometheus.sh && \
-    chmod +x /usr/local/bin/start-prometheus.sh
+# Create a wrapper script to replace environment variables and start Prometheus
+USER root
+RUN echo '#!/bin/sh' > /bin/start-prometheus.sh && \
+    echo 'set -e' >> /bin/start-prometheus.sh && \
+    echo 'sed "s/\${PROMETHEUS_METRICS_USERNAME}/$PROMETHEUS_METRICS_USERNAME/g; s/\${PROMETHEUS_METRICS_PASSWORD}/$PROMETHEUS_METRICS_PASSWORD/g" /etc/prometheus/prometheus.yml.template > /etc/prometheus/prometheus.yml' >> /bin/start-prometheus.sh && \
+    echo 'exec /bin/prometheus "$@"' >> /bin/start-prometheus.sh && \
+    chmod +x /bin/start-prometheus.sh && \
+    mkdir -p /prometheus && \
+    chown -R nobody:nobody /prometheus /etc/prometheus /bin/start-prometheus.sh
 
 # Switch back to non-root user
 USER nobody
@@ -25,8 +19,10 @@ USER nobody
 # Expose Prometheus web UI on port 9090
 EXPOSE 9090
 
+# Use our custom start script as the entrypoint
+ENTRYPOINT ["/bin/start-prometheus.sh"]
+
 # Start Prometheus with the configuration
-ENTRYPOINT ["/usr/local/bin/start-prometheus.sh"]
 CMD ["--config.file=/etc/prometheus/prometheus.yml", \
      "--storage.tsdb.path=/prometheus", \
      "--web.console.libraries=/usr/share/prometheus/console_libraries", \
