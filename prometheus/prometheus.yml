@@ -8,10 +8,10 @@ scrape_configs:
     static_configs:
       - targets: ['schulaufgabe-backend-docker.onrender.com']
     metrics_path: /metrics
-    # Add basic auth if needed in the future
-    # basic_auth:
-    #   username: prometheus
-    #   password: secure_password
+    # Basic auth configuration - set these in environment variables
+    basic_auth:
+      username: "${PROMETHEUS_METRICS_USERNAME}"
+      password: "${PROMETHEUS_METRICS_PASSWORD}"
 
   # Self-monitoring
   - job_name: 'prometheus'

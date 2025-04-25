@@ -8,7 +8,11 @@ services:
     envVars:
       - key: PORT
         value: 9090
+      - key: PROMETHEUS_METRICS_USERNAME
+        sync: METRICS_USERNAME
+      - key: PROMETHEUS_METRICS_PASSWORD
+        sync: METRICS_PASSWORD
     autoDeploy: true
-    region: frankfurt # Default: oregon
+    region: frankfurt
     plan: free
     healthCheckPath: /-/healthy

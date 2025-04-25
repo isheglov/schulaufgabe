@@ -2,6 +2,7 @@ import logging
 import os
 import pprint
 import re
+import secrets
 import subprocess
 import tempfile
 import time
@@ -10,9 +11,20 @@ import uuid
 import aiofiles
 import google.generativeai as genai
 from dotenv import load_dotenv
-from fastapi import Body, FastAPI, File, Request, UploadFile
+from fastapi import (
+    Body,
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -24,6 +36,13 @@ from prometheus_client import (
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
+
+# Set up HTTP Basic Auth
+security = HTTPBasic()
+
+# Mount static files directory
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -122,8 +141,37 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
+def verify_prometheus_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify Prometheus metrics access credentials"""
+    # Load environment variables if not already loaded
+    load_dotenv()
+
+    # Get environment variables
+    correct_username = os.getenv("METRICS_USERNAME")
+    correct_password = os.getenv("METRICS_PASSWORD")
+
+    # Ensure environment variables are loaded and not None
+    if not correct_username or not correct_password:
+        logging.error("METRICS_USERNAME or METRICS_PASSWORD not set in environment")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error: Metrics authentication not properly configured",
+        )
+
+    is_correct_username = secrets.compare_digest(credentials.username, correct_username)
+    is_correct_password = secrets.compare_digest(credentials.password, correct_password)
+
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials
+
+
 @app.get("/metrics")
-async def metrics():
+async def metrics(credentials: HTTPBasicCredentials = Depends(verify_prometheus_auth)):
     # Ensure the response has proper headers for production
     content = generate_latest()
     response = PlainTextResponse(content, media_type=CONTENT_TYPE_LATEST)
@@ -137,12 +185,20 @@ async def metrics():
 
 
 @app.get("/api/metrics")
-async def api_metrics():
+async def api_metrics(
+    credentials: HTTPBasicCredentials = Depends(verify_prometheus_auth),
+):
     content = generate_latest()
     response = PlainTextResponse(content, media_type=CONTENT_TYPE_LATEST)
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
     return response
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon.ico"""
+    return FileResponse(os.path.join(static_dir, "favicon.ico"))
 
 
 @app.get("/")
